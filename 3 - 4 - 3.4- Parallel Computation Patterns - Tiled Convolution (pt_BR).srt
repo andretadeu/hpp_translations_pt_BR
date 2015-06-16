@@ -1,0 +1,1122 @@
+1
+00:00:00,826 --> 00:00:05,299
+[MÚSICA]
+
+2
+00:00:05,299 --> 00:00:09,556
+Olá a todos, bem-vindos de volta ao curso de
+Programação Paralela Heterogênea.
+
+3
+00:00:09,556 --> 00:00:15,609
+Nós estamos na aula 3.4 e introduziremos
+computação de convolução seccionada.
+
+4
+00:00:17,110 --> 00:00:22,346
+O objetivo desta aula é para que aprenda
+acerca de como podemos introduzir
+
+5
+00:00:22,346 --> 00:00:27,644
+técnicas de seccionamento de dados...
+técnicas de acesso a dados em algoritmos de convolução.
+
+6
+00:00:27,644 --> 00:00:31,070
+E há alguns fatos... hum.. aspectos intrincados
+
+7
+00:00:31,070 --> 00:00:37,140
+de convolução que afetam a complexidade
+e a eficiência de algoritmos de seccionamento.
+
+8
+00:00:37,140 --> 00:00:41,740
+E em particular iremos projetar as seções
+
+9
+00:00:41,740 --> 00:00:46,240
+de entrada e de saída diferentemente, de
+forma a gerenciar a complexidade dos algoritmos.
+
+10
+00:00:49,890 --> 00:00:55,290
+Bem, este slide mostra o projeto da seção
+de saída e o índice do dado de saída
+
+11
+00:00:55,290 --> 00:01:00,410
+mapeado para um tipo de algoritmo
+de convolução seccionada unidimensional.
+
+12
+00:01:00,410 --> 00:01:07,020
+Aqui assumimos que dividiremos o arranjo de
+saída em seções de saída
+
+13
+00:01:07,020 --> 00:01:11,376
+e cada seção será gerada por um bloco
+
+14
+00:01:11,376 --> 00:01:15,336
+de threads e definiremos o... o
+
+15
+00:01:15,336 --> 00:01:17,712
+tamanho do arquivo de saída com uma
+
+16
+00:01:17,712 --> 00:01:22,898
+constante em tempo de compilação O_TILE_WIDTH,
+comprimento da seção de saída.
+
+17
+00:01:22,898 --> 00:01:29,131
+E cada bloco de threads, como mencionei,
+calculará uma... uma seção de saída.
+
+18
+00:01:29,131 --> 00:01:34,651
+E então nós, baseados nisto, isto é na
+verdade muito similar à soma
+
+19
+00:01:34,651 --> 00:01:40,355
+de vetores, e usaremos esta expressão
+familiar para... para
+
+20
+00:01:40,355 --> 00:01:46,151
+ter certeza de que cada elemento e gerado
+por uma thread no...
+
+21
+00:01:46,151 --> 00:01:51,990
+...no bloco de threads.
+Assim, nós calcularemos o 
+
+22
+00:01:51,990 --> 00:01:57,640
+índice do arranjo de saída com blockIdx.x vezes
+
+23
+00:01:57,640 --> 00:02:02,410
+o comprimento da seção de saída mais o
+índice da thread threadIdx.x.
+
+24
+00:02:02,410 --> 00:02:06,360
+Essencialmente, usaremos o blockIdx.x
+
+25
+00:02:06,360 --> 00:02:10,440
+para pular todas as seções de saída
+
+26
+00:02:10,440 --> 00:02:13,880
+que são cobertos pelos blocos de threads
+anteriores.
+
+27
+00:02:13,880 --> 00:02:15,890
+E então dentro do bloco de threads,
+
+28
+00:02:15,890 --> 00:02:20,240
+usaremos threadIdx para selecionar um dos
+elementos de saída.
+
+29
+00:02:20,240 --> 00:02:25,850
+Se por exemplo, se olharmos para
+a thread um do,
+
+30
+00:02:25,850 --> 00:02:31,970
+vocês sabem, bloco um, blockIdx é 1, logo
+teremos
+
+31
+00:02:31,970 --> 00:02:37,682
+1 vezes 4 que pulará todos os quatro
+elementos neste...
+
+32
+00:02:37,682 --> 00:02:43,610
+...nesta seção e threadIdx é 1.
+Assim somaremos 1 a 4 que é 5.
+
+33
+00:02:43,610 --> 00:02:47,532
+Isso permite à thread um do bloco um
+
+34
+00:02:47,532 --> 00:02:53,310
+escrever no elemento cinco do arranjo
+de saída. (sexto elemento do arranjo)
+
+35
+00:02:53,310 --> 00:02:57,410
+Neste exemplo em particular, usamos
+uma seção
+
+36
+00:02:57,410 --> 00:03:04,160
+de saída de comprimento bem pequeno, que é 4.
+Na prática, usaremos
+
+37
+00:03:04,160 --> 00:03:10,219
+centenas ou mesmo milhares também como
+dados de saída... comprimento da seção de saída
+
+38
+00:03:11,620 --> 00:03:17,030
+Este slide introduz o conceito de seção
+de entrada e definiremos
+
+39
+00:03:17,030 --> 00:03:22,512
+a seção de entrada como todos os elementos
+que são necessários para calcular os elementos da 
+
+40
+00:03:22,512 --> 00:03:23,790
+seção de saída.
+
+41
+00:03:23,790 --> 00:03:27,890
+Assim a seção de entrada é de fato definida
+relativa a uma seção de saída.
+
+42
+00:03:27,890 --> 00:03:33,362
+Então, lembrem-se de quando calculamos
+o valor da convolução para o
+
+43
+00:03:33,362 --> 00:03:38,450
+elemento 4, se usarmos uma máscara de
+tamanho cinco, precisaremos
+
+44
+00:03:38,450 --> 00:03:43,154
+ter os elementos 2, 3, 4, 5, 6, e
+
+45
+00:03:43,154 --> 00:03:48,050
+a seção de entrada é... na verdade...
+vocês sabem... vocês sabem... depende
+
+46
+00:03:48,050 --> 00:03:53,750
+do comprimento da máscara.
+Logo quanto mais longa
+
+47
+00:03:53,750 --> 00:04:00,410
+a máscara, mais elementos de entrada serão
+relativos a uma seção de saída.
+
+48
+00:04:00,410 --> 00:04:05,730
+Neste caso em particular, precisaremos ter
+dois elementos adicionais
+
+49
+00:04:05,730 --> 00:04:11,560
+de cada lado de forma a ser possível
+gerar todos os elementos da seção se saída.
+
+50
+00:04:11,560 --> 00:04:13,320
+Neste exemplo
+
+51
+00:04:13,320 --> 00:04:18,718
+em particular, o comprimento da seção de saída
+é 4 e o comprimento da seção de entrada é 8.
+
+52
+00:04:18,718 --> 00:04:24,262
+Na prática, bem temos seções de saída muito,
+mas muito maiores. A máscara,
+
+53
+00:04:24,262 --> 00:04:29,070
+em geral, não será muito maior do que 5.
+
+54
+00:04:29,070 --> 00:04:34,180
+Na realidade teremos a seção de entrada
+e a seção de saída relativamente próximas
+
+55
+00:04:34,180 --> 00:04:38,500
+entre si quando o tamanho da seção de saída é
+muito maior
+
+56
+00:04:38,500 --> 00:04:43,275
+na prática.
+Mas neste exemplo, teremos,
+
+57
+00:04:43,275 --> 00:04:48,880
+vocês sabem, parece que a seção de entrada
+é o dobro do tamanho da seção de saída.
+
+58
+00:04:48,880 --> 00:04:53,930
+Mas na prática estas serão relativamente
+muito próximas em tamanho
+
+59
+00:04:53,930 --> 00:04:59,220
+entre si.
+E definiremos a
+
+60
+00:04:59,220 --> 00:05:04,245
+dimensão do bloco de modo que teremos
+
+61
+00:05:04,245 --> 00:05:08,090
+threads suficientes para cobrir
+todos os elementos da seção de entrada.
+
+62
+00:05:08,090 --> 00:05:12,850
+Neste caso em particular, ao invés de
+definirmos o blockDim para ser 4,
+
+63
+00:05:12,850 --> 00:05:17,660
+nos na verdade definiremos o blockDim para ser 8,
+somente para termos uma
+
+64
+00:05:17,660 --> 00:05:23,102
+thread para carregar cada elemento de entrada e
+então quando se trata do
+
+65
+00:05:23,102 --> 00:05:28,570
+cálculo do elemento de saída, algumas
+threads serão inativadas.
+
+66
+00:05:28,570 --> 00:05:29,730
+Apenas
+
+67
+00:05:29,730 --> 00:05:35,390
+algumas das threads serão envolvidas,
+de fato, no cálculo dos elementos de saída.
+
+68
+00:05:39,330 --> 00:05:44,410
+O que leva à política para
+determinar o
+
+69
+00:05:44,410 --> 00:05:49,650
+índice de dados de entrada.
+Em essência teremos a thread zero de
+
+70
+00:05:49,650 --> 00:05:55,040
+cada bloco de thread para carregar os elementos
+zero da seção de entrada e assim por diante.
+
+71
+00:05:55,040 --> 00:05:59,050
+Isto essencialmente nos permite usar todas
+as threads no
+
+72
+00:05:59,050 --> 00:06:05,060
+bloco de threads para carregar elementos
+consecutivos na seção de entrada.
+
+73
+00:06:05,060 --> 00:06:12,220
+E como pode ver por causa do
+deslocamento do elemento,
+
+74
+00:06:12,220 --> 00:06:17,370
+sempre quando a thread zero carregar
+o elemento de saída, vamos
+
+75
+00:06:17,370 --> 00:06:22,393
+dizer index_o, precisaremos subtrair o
+raio.
+
+76
+00:06:22,393 --> 00:06:28,250
+Essencialmente o raio da máscara
+que é dois neste exemplo.
+
+77
+00:06:28,250 --> 00:06:30,625
+Logo podemos descobrir
+
+78
+00:06:30,625 --> 00:06:35,600
+o índice para usar na carga do elemento
+de entrada.
+
+79
+00:06:35,600 --> 00:06:40,380
+A thread 0 será carregada com o
+elemento de entrada dois
+
+80
+00:06:40,380 --> 00:06:44,930
+enquanto que será calculado
+o elemento de saída 4.
+
+81
+00:06:44,930 --> 00:06:50,324
+E esta é uma relação importante
+neste projeto
+
+82
+00:06:50,324 --> 00:06:55,532
+em particular. O índice de entrada será
+o índice de saída menos n,
+
+83
+00:06:55,532 --> 00:06:59,531
+o qual n é o comprimento da máscara me...
+dividido por 2,
+
+84
+00:06:59,531 --> 00:07:03,800
+o qual será... chamaremos de raio da
+máscara.
+
+85
+00:07:08,010 --> 00:07:12,380
+Aqui está a... um simples trecho de código que
+permite todas
+
+86
+00:07:12,380 --> 00:07:17,620
+as threads colaborarem e carregarem uma
+seção de entrada no bloco de threads.
+
+87
+00:07:17,620 --> 00:07:22,660
+Bem, iremos testar se o índice de entrada
+está dentro do intervalo válido.
+
+88
+00:07:22,660 --> 00:07:27,430
+Bem se o índice... o índice de entrada está
+dentro do intervalo válido,
+
+89
+00:07:27,430 --> 00:07:32,560
+iremos usar este índice para obter o
+elemento n em um
+
+90
+00:07:32,560 --> 00:07:36,111
+local correspondente da memória compartilhada.
+
+91
+00:07:36,111 --> 00:07:40,199
+e então, obviamente, podemos usar somente
+o índice da thread para selecionar...
+
+92
+00:07:40,199 --> 00:07:45,120
+...selecionar um dos locais no arranjo
+da memória compartilhada para este propósito.
+
+93
+00:07:45,120 --> 00:07:52,320
+E então se o... se o ín... índice de entrada
+está fora do intervalo de valores podemos
+
+94
+00:07:52,320 --> 00:07:58,768
+simplesmente atribuir um valor zero no
+local correspondente na memória compartilhada.
+
+95
+00:07:58,768 --> 00:08:04,350
+E isto implementa a política de tratar
+todos os elementos fantasmas como zeros.
+
+96
+00:08:06,560 --> 00:08:12,100
+Após esta carga você poderá precisar lembrar
+de fazer uma sincronização de barreira para
+
+97
+00:08:12,100 --> 00:08:13,950
+se assegurar de que todas as threads
+
+98
+00:08:13,950 --> 00:08:18,610
+no bloco de threads completaram suas...
+suas... suas atividades de carga.
+
+99
+00:08:18,610 --> 00:08:22,093
+Assim então podemos transicionar para
+o cálculo
+
+100
+00:08:22,093 --> 00:08:26,820
+dos elementos de saída fora do
+conteúdo da memória compartilhada.
+
+101
+00:08:26,820 --> 00:08:32,190
+Assim, vocês sabem, lembrem-se que... com...
+nós queremos dizer... teremos mais elementos
+
+102
+00:08:32,190 --> 00:08:37,400
+no bloco de threads para cobrir a
+seção de saída, o... o
+
+103
+00:08:37,400 --> 00:08:41,120
+tamanho do bloco de threads é, na verdade,
+maior do que a seção de saída.
+
+104
+00:08:41,120 --> 00:08:46,600
+Assim estamos apenas usando a primeira
+seção de saída com elementos nas threads para
+
+105
+00:08:46,600 --> 00:08:51,490
+calcular a seção de saída e o restante
+das threads serão inativadas.
+
+106
+00:08:51,490 --> 00:08:57,967
+Assim isto é implementado com este 'if
+statement' e apenas as threads cujo
+
+107
+00:08:57,967 --> 00:09:00,520
+index é menor do que comprimento da
+
+108
+00:09:00,520 --> 00:09:03,750
+seção de saída participarão deste
+cálculo.
+
+109
+00:09:03,750 --> 00:09:08,910
+E para cada uma destas threads
+iniciaremos o valor de saída para zero e
+
+110
+00:09:08,910 --> 00:09:14,320
+então iremos através do laço para
+percorrer a vizinhança
+
+111
+00:09:14,320 --> 00:09:17,600
+e para cada valor na vizinhança
+iremos
+
+112
+00:09:17,600 --> 00:09:23,200
+pegar o valor em M e então um
+valor correspondente
+
+113
+00:09:24,498 --> 00:09:28,110
+n na memória compartilhada para efetuar
+o produto
+
+114
+00:09:28,110 --> 00:09:31,520
+e então iremos acumular neste laço for.
+
+115
+00:09:31,520 --> 00:09:37,410
+Este cálculo mostra que para
+acessar a memória compartilhada
+
+116
+00:09:37,410 --> 00:09:43,050
+teremos um local de início definido por
+threadIdx.x.
+
+117
+00:09:43,050 --> 00:09:48,090
+E isto é, na verdade, ilustrado há de
+dois slides atrás.
+
+118
+00:09:48,090 --> 00:09:49,629
+E voltemos
+
+119
+00:09:49,629 --> 00:09:55,070
+a esta definição aqui.
+Quando nós carregamos a
+
+120
+00:09:55,070 --> 00:10:00,490
+seção de entrada na memória compartilhada,
+nós teremos todas as
+
+121
+00:10:00,490 --> 00:10:06,600
+threads definindo os seus pontos de
+partida com seus índices de thread.
+
+122
+00:10:06,600 --> 00:10:12,540
+Assim a thread zero iniciará com o
+local zero do arranjo de memória comparilhada.
+
+123
+00:10:12,540 --> 00:10:14,844
+A thread zero acessará 2,
+
+124
+00:10:14,844 --> 00:10:17,119
+3, 4, 5, 6 na memória compartilhada.
+
+125
+00:10:17,119 --> 00:10:20,080
+E a thread um iniciará com o elemento um.
+
+126
+00:10:20,080 --> 00:10:22,090
+Por isso é que usamos o índice
+
+127
+00:10:22,090 --> 00:10:25,700
+da thread como local de início para
+esse laço for.
+
+128
+00:10:28,570 --> 00:10:31,320
+Assim em todas as threads usamos o índice
+
+129
+00:10:31,320 --> 00:10:34,420
+de thread como local inicial e então
+teremos de
+
+130
+00:10:34,420 --> 00:10:38,880
+ir incrementando j através da vizinhança
+tanto para m quanto para n,
+
+131
+00:10:38,880 --> 00:10:42,250
+de modo que podemos calcular essa soma
+ponderada na vizinhança.
+
+132
+00:10:42,250 --> 00:10:45,350
+E uma vez que terminamos o laço for, pegamos
+o valor de saída,
+
+133
+00:10:45,350 --> 00:10:50,070
+nós o atribuímos ao arranjo de saída P e
+então terminamos.
+
+134
+00:10:50,070 --> 00:10:53,720
+É importante lembrarmos que apenas
+
+135
+00:10:53,720 --> 00:10:57,710
+as thread zero até a thread comprimento
+da seção de saída menos
+
+136
+00:10:57,710 --> 00:11:01,170
+um irão participar do cálculo desta saída.
+
+137
+00:11:04,350 --> 00:11:07,690
+Este é o projeto de um kernel de
+
+138
+00:11:07,690 --> 00:11:12,710
+de seção unidimensional e então precisaremos
+também definir o tamanho do bloco.
+
+139
+00:11:12,710 --> 00:11:17,075
+mas lembrem-se que o tamanho do bloco é definido
+de modo que temos threads suficientes em
+
+140
+00:11:17,075 --> 00:11:21,970
+um bloco para carregar toda... para cada thread
+carregar um elemento da seção de entrada.
+
+141
+00:11:21,970 --> 00:11:29,430
+Digamos que se quisermos ter 100... 1024
+threads em um bloco de threads, então o tamanho
+
+142
+00:11:29,430 --> 00:11:34,250
+da seção de entrada será 1024 e então o
+comprimento da seção de saída realmente precisará
+
+143
+00:11:34,250 --> 00:11:39,220
+ser, vocês sabem, n sobre 2... n... n...
+
+144
+00:11:39,220 --> 00:11:45,100
+menos 1... não n menos 1! mas o comprimento
+da máscara menos um
+
+145
+00:11:45,100 --> 00:11:50,130
+menor do que o... o comprimento da seção de
+entrada. Porque a seção de
+
+146
+00:11:50,130 --> 00:11:54,890
+entrada tem, vocês sabem, que o comprimento
+da máscara dividido por
+
+147
+00:11:54,890 --> 00:11:57,970
+dois, que é o raio da máscara em
+cada lado.
+
+148
+00:11:57,970 --> 00:12:01,220
+Nós teremos, para uma máscara de comprimento cinco,
+
+149
+00:12:01,220 --> 00:12:04,770
+dois elementos em cada lada para a
+seção de entrada.
+
+150
+00:12:04,770 --> 00:12:10,440
+Em geral, se n é o comprimento
+da máscara dividido por 2, teremos,
+
+151
+00:12:10,440 --> 00:12:16,350
+vocês sabem, que o comprimento da máscara
+menos um elemento adicional
+
+152
+00:12:16,350 --> 00:12:19,670
+na seção de entrada comparado à
+seção de saída.
+
+153
+00:12:19,670 --> 00:12:24,480
+Se queremos 1024 elementos na seção de saída,
+e o
+
+154
+00:12:24,480 --> 00:12:29,950
+comprimento da máscara é 5, teremos 1020
+elementos
+
+155
+00:12:29,950 --> 00:12:34,670
+na seção de saída.
+Logo, isto define o comprimento da seção de saída.
+
+156
+00:12:34,670 --> 00:12:40,320
+Isto nos dá 1020 elementos na
+seção de saída, e então
+
+157
+00:12:40,320 --> 00:12:46,159
+e então definimos cada bloco para ter 1024.
+
+158
+00:12:46,159 --> 00:12:51,630
+1024 é um número conveniente por ser um
+número que é potência perfeita de 2,
+
+159
+00:12:51,630 --> 00:12:57,640
+o que nos dá um bom tamanho de bloco e um
+bom número de threads na execução.
+
+160
+00:12:57,640 --> 00:13:01,250
+Uma vez que definimos o comprimento do bloco
+e o comprimento da seção de saída,
+
+161
+00:13:01,250 --> 00:13:05,805
+o comprimento do bloco é essencialmente o mesmo
+que o comprimento da seção de entrada.
+
+162
+00:13:05,805 --> 00:13:11,532
+Então podemor dizer que o blockDim, a dimensão
+do bloco, e 
+
+163
+00:13:11,532 --> 00:13:15,018
+a dimensão da grade serem, respectivamente,
+o comprimento do bloco, e 1 e 1, tal qual
+
+164
+00:13:15,018 --> 00:13:19,417
+o caso da soma de vetores e então
+podemos ter a dimensão
+
+165
+00:13:19,417 --> 00:13:23,069
+da grade ser Width menos 1, dividido
+pelo comprimento da saída,
+
+166
+00:13:23,069 --> 00:13:28,640
+e então ao resultado da divisão
+adiciona-se um.
+
+167
+00:13:28,640 --> 00:13:31,270
+Isto é essencialmente o cálculo do
+
+168
+00:13:31,270 --> 00:13:35,898
+teto de Width dividido pelo
+comprimento da seção de saída.
+
+169
+00:13:35,898 --> 00:13:36,858
+Então lembrem-se
+
+170
+00:13:36,858 --> 00:13:42,714
+que o número de blocos de threads
+que precisamos é determinado pelo
+
+171
+00:13:42,714 --> 00:13:48,880
+número de blocos de threads necessários para
+calcular todos os elementos de saída.
+
+172
+00:13:48,880 --> 00:13:52,260
+Como todo bloco de threads gerará um
+
+173
+00:13:52,260 --> 00:13:55,148
+uma seção de saída com um número de elementos,
+nós precisamos
+
+174
+00:13:55,148 --> 00:13:58,300
+pegar o comprimento da saída e dividí-lo
+
+175
+00:13:58,300 --> 00:14:01,940
+pelo comprimento da seção de saída e
+utilizar a função de teto.
+
+176
+00:14:01,940 --> 00:14:05,290
+Isto nos dá blocos de threads suficientes para
+
+177
+00:14:05,290 --> 00:14:09,130
+calcular todos os elementos de saída,
+mas então precisamos
+
+178
+00:14:09,130 --> 00:14:12,570
+definir que a dimensão de cada bloco
+seja
+
+179
+00:14:12,570 --> 00:14:15,890
+grande o suficiente para cobrir todos
+os elementos da seção de entrada.
+
+180
+00:14:15,890 --> 00:14:20,810
+Está é, na verdade, uma parte confusa do
+algoritmo de seccionamento
+
+181
+00:14:20,810 --> 00:14:25,170
+onde as seções de entrada e as seções de
+saída possuem tamanhos distintos.
+
+182
+00:14:25,170 --> 00:14:27,228
+Neste... em nosso
+
+183
+00:14:27,228 --> 00:14:33,990
+exemplo, quando o comprimento da máscara é 5,
+nos teremos essencialmente o comprimento
+
+184
+00:14:33,990 --> 00:14:40,780
+da seção de saída mais 4 sendo  o
+comprimento do bloco.
+
+185
+00:14:40,780 --> 00:14:45,130
+Mas em geral, o comprimento do bloco
+deve ser
+
+186
+00:14:45,130 --> 00:14:48,631
+o comprimento da seção de saída mais o
+comprimento da máscara menos 1.
+
+187
+00:14:52,580 --> 00:14:57,250
+Agora que você tem um conceito em
+alto nível
+
+188
+00:14:57,250 --> 00:15:01,810
+de como um kernel unidimensional de seção
+deve ser
+
+189
+00:15:01,810 --> 00:15:07,190
+projetado, também precisamos ter algum
+entendimento preliminar
+
+190
+00:15:07,190 --> 00:15:12,470
+na compreensão dos benefícios dos algoritmos
+de seção para padrões de convolução.
+
+191
+00:15:12,470 --> 00:15:18,150
+Este slide mostra o reúso dos dados
+
+192
+00:15:18,150 --> 00:15:21,980
+compartilhados em nosso pequeno exemplo.
+
+193
+00:15:21,980 --> 00:15:28,200
+Sempre que carregamos estes elementos na
+memória compartilhada nós
+
+194
+00:15:28,200 --> 00:15:31,450
+gostariamos de ser capazer de reusar estes
+elementos múltiplas vezes.
+
+195
+00:15:32,548 --> 00:15:37,860
+Diferentemente do exemplo de
+multiplicação de matrizes que o
+
+196
+00:15:37,860 --> 00:15:42,948
+cálculo da convolução não tem o mesmo
+número de
+
+197
+00:15:42,948 --> 00:15:47,150
+reúso para todos os elementos de entrada
+carregados na memória compartilhada.
+
+198
+00:15:47,150 --> 00:15:53,126
+Assim, se olharmos para todos os elementos
+que carregamos na memória compartilhada em nosso
+
+199
+00:15:53,126 --> 00:15:55,865
+exemplo, o elemento 2 somente será
+
+200
+00:15:55,865 --> 00:16:00,310
+usado no cálculo do elemento de saída 4.
+
+201
+00:16:00,310 --> 00:16:04,426
+Assim, você sabe que o cálculo do
+elemento 4
+
+202
+00:16:04,426 --> 00:16:07,954
+requerirá o 2, 3, 4, 5, 6 e então
+
+203
+00:16:07,954 --> 00:16:14,594
+o cálculo do elemento 5 envolverá o
+3, 4, 5, 6, 7.
+
+204
+00:16:14,594 --> 00:16:17,668
+Portanto o 2 não se envolverá em nenhum
+
+205
+00:16:17,668 --> 00:16:23,370
+outro cálculo de nenhum outro elemento
+de saída que não for o 4.
+
+206
+00:16:23,370 --> 00:16:28,210
+É por isso que o elemento 4 será
+usado apenas quando
+
+207
+00:16:28,210 --> 00:16:33,750
+for carregado para a memória compartilhada.
+A memória compartilhanda não proverá
+
+208
+00:16:33,750 --> 00:16:36,970
+um bom reúso para o elemento em particular.
+
+209
+00:16:36,970 --> 00:16:41,758
+No entanto, o elemento 3 será reusado
+em pouquinho mais, porque o elemento
+
+210
+00:16:41,758 --> 00:16:46,790
+3 será usado para calcular tanto o
+elemento 4 quanto o elemento 5.
+
+211
+00:16:46,790 --> 00:16:52,655
+E o elemento 4 na entrada será usado no
+
+212
+00:16:52,655 --> 00:16:58,859
+cálculo das saídas 4, 5 e 6.
+E o elemento de entrada 5 será
+
+213
+00:16:58,859 --> 00:17:05,190
+calculado, usado no cálculo de 4, 5, 6 e 7.
+
+214
+00:17:05,190 --> 00:17:09,710
+Logo, se continuarmos este processo
+veremos que cada
+
+215
+00:17:09,710 --> 00:17:14,380
+elemento de entrada carregado na memória
+compartilhada será reusado um
+
+216
+00:17:14,380 --> 00:17:18,045
+número de vezes e isto será importante
+no entendimento
+
+217
+00:17:18,045 --> 00:17:24,090
+do benefício líquido do carregamento dos
+valores de entrada em uma seção na
+
+218
+00:17:24,090 --> 00:17:28,360
+memória compartilhada, quando fazemos a
+análise de benefícios.
+
+219
+00:17:29,950 --> 00:17:34,090
+É também importante entender que
+alguns dos
+
+220
+00:17:34,090 --> 00:17:37,390
+dados reusados serão também afetados por
+essas células.
+
+221
+00:17:37,390 --> 00:17:43,594
+Quando olhamos para a seção de
+entrada 0, o que vemos é que
+
+222
+00:17:43,594 --> 00:17:49,610
+para comprimento de máscara de 5 teremos
+dois elementos fantasmas
+
+223
+00:17:49,610 --> 00:17:54,744
+à esquerda.
+O cálculo do
+
+224
+00:17:54,744 --> 00:17:59,848
+elemento 0 e 1 envolverá os valores zero
+dos elementos fantasmas
+
+225
+00:17:59,848 --> 00:18:04,776
+e estes valores são atribuídos na
+memória compartilhada em vez de
+
+226
+00:18:04,776 --> 00:18:10,370
+carregados da memória global na
+memória compartilhada.
+
+227
+00:18:10,370 --> 00:18:14,830
+Isto, na verdade, afetará o número de
+
+228
+00:18:14,830 --> 00:18:20,710
+acessos à memória que precisaremos fazer ou
+o benefício líquido de um algoritmo de seção.
+
+229
+00:18:20,710 --> 00:18:25,069
+Bem, nós voltaremos a este ponto mais tarde
+em uma aula futura.
+
+230
+00:18:26,790 --> 00:18:30,080
+Bem, neste ponto, você tem o entendimento
+básico
+
+231
+00:18:30,080 --> 00:18:36,840
+de um algoritmo de seção em particular,
+algoritmo de convolução seccionada em 1D.
+
+232
+00:18:36,840 --> 00:18:40,133
+Se quiser, pois, entender
+
+233
+00:18:40,133 --> 00:18:43,693
+mais sobre este aspecto, eu gostaria
+de encorajá-lo
+
+234
+00:18:43,693 --> 00:18:47,388
+a ler a seção 8.4 do livro-texto.
+
+235
+00:18:47,388 --> 00:18:48,631  
+Obrigado.
+

@@ -1,0 +1,1007 @@
+1
+00:00:05,460 --> 00:00:06,340
+Olá a todos.
+
+2
+00:00:06,340 --> 00:00:09,600
+Bem-vindos de volta ao curso de
+Programação Paralela Heterogênea.
+
+3
+00:00:11,240 --> 00:00:13,570
+Nas próximas aulas, nos iremos
+
+4
+00:00:13,570 --> 00:00:19,480
+cobrir alguns dos mais importantes
+padrões de computação paralela.
+
+5
+00:00:19,480 --> 00:00:22,850
+E iremos introduzir estes padrões
+por duas razões.
+
+6
+00:00:22,850 --> 00:00:27,850
+Uma é que estes padrões são muito importantes
+em computação paralela em geral.
+
+7
+00:00:27,850 --> 00:00:30,540
+Logo estes padrões são importantes
+
+8
+00:00:30,540 --> 00:00:31,310
+por si só.
+
+9
+00:00:31,310 --> 00:00:33,820
+E a segunda é que o que cada padrão
+poderá
+
+10
+00:00:33,820 --> 00:00:38,450
+introduzir algumas técnicas
+e conceitos importantes.
+
+11
+00:00:38,450 --> 00:00:41,150
+Que geralmente vão com estes padrões.
+
+12
+00:00:41,150 --> 00:00:44,130
+Deste modo, começaremos com convolução
+
+13
+00:00:46,660 --> 00:00:49,460
+O objetivo desta aula é ajudá-lo a aprender
+
+14
+00:00:49,460 --> 00:00:51,620
+convolução, que é um padrão de computação
+
+15
+00:00:51,620 --> 00:00:54,220
+paralela importante, como nós já
+mencionamos.
+
+16
+00:00:54,220 --> 00:00:57,570
+E esta computação em particular é
+amplamente usada
+
+17
+00:00:57,570 --> 00:01:02,080
+em processamento de sinais, processamento
+de imagens e processamento de vídeo.
+
+18
+00:01:02,080 --> 00:01:05,780
+E o mais importante, também serve como
+
+19
+00:01:05,780 --> 00:01:09,630
+fundação para tantos outros
+padrões computacionais.
+
+20
+00:01:09,630 --> 00:01:12,460
+E então, por exemplo, a computação por
+stencil (stencil computation)
+
+21
+00:01:12,460 --> 00:01:16,350
+que é usada em muitas aplicações
+científicas e de engenharia.
+
+22
+00:01:16,350 --> 00:01:21,790
+E então junto a estes padrões, nós
+iremos introduzir técnicas importantes
+
+23
+00:01:21,790 --> 00:01:27,990
+para seccionar dados para padrões de acesso
+mais intrincados e também
+
+24
+00:01:27,990 --> 00:01:33,650
+como podemos tirar vantagem de algumas das
+memórias cache especializadas na GPU.
+
+25
+00:01:37,370 --> 00:01:39,490
+Voltemos à convolução um pouquinho.
+
+26
+00:01:39,490 --> 00:01:44,250
+As aplicações da convolução são geralmente
+feitas como um filtro
+
+27
+00:01:44,250 --> 00:01:49,090
+que transforma sinais ou pixels em
+valores mais desejáveis.
+
+28
+00:01:49,090 --> 00:01:54,580
+E esta é a razão do porquê nós
+frequentemente vemos em convolução em sig...
+
+29
+00:01:54,580 --> 00:02:01,080
+... como processamento de sinais, ou processamento
+de imagens, ou processamento de vídeo.
+
+30
+00:02:01,080 --> 00:02:02,950
+E alguns destes filtros são
+
+31
+00:02:02,950 --> 00:02:06,200
+efetivamente usados para suavizar os
+valores de sinais, assim
+
+32
+00:02:06,200 --> 00:02:09,640
+podemos ter a visão geral mais
+facilmente.
+
+33
+00:02:09,640 --> 00:02:13,800
+E em algumas outras situações nós
+fazemos justamente o oposto.
+
+34
+00:02:13,800 --> 00:02:19,470
+Nós usamos algo como filtros
+Gaussianos como computação de convolução
+
+35
+00:02:19,470 --> 00:02:23,950
+para acentuar as bordas, as fronteiras e
+as arestas dos objetos na imagem.
+
+36
+00:02:26,920 --> 00:02:32,280
+Logo, o que é computação de convolução?
+Concretamente
+
+37
+00:02:32,280 --> 00:02:37,550
+a computação de convolução é uma operação
+em arranjo, onde cada elemento dos dados de saída
+
+38
+00:02:37,550 --> 00:02:42,450
+é uma soma ponderada de uma coleção de
+elementos de entrada vizinhos.
+
+39
+00:02:42,450 --> 00:02:46,690
+Em geral, quando nós efetuamos uma convolução,
+transformaremos um
+
+40
+00:02:46,690 --> 00:02:51,370
+arranjo de entrada em um arranjo de saída
+do mesmo tamanho.
+
+41
+00:02:51,370 --> 00:02:52,280
+E... eles... 
+
+42
+00:02:52,280 --> 00:02:55,670
+irão... há geralmente uma correspondência
+de um-a-um entre
+
+43
+00:02:55,670 --> 00:02:58,760
+o arranjo dos dados de entrada e
+o arranjo dos dados de saída.
+
+44
+00:02:58,760 --> 00:03:03,150
+Para computar cada elemento do arranjo de saída
+nós pegaremos o elemento de entrada no
+
+45
+00:03:03,150 --> 00:03:08,350
+elemento de entrada correspondente no
+arranjo de entrada e alguns dos elementos
+vizinhos
+
+46
+00:03:08,350 --> 00:03:13,780
+nesse... hum... nesse arranjo de entrada para
+efetuar um cálculo de soma ponderada.
+
+47
+00:03:13,780 --> 00:03:17,960
+E os pesos usados neste cálculo são
+definidos
+
+48
+00:03:17,960 --> 00:03:20,690
+por um arranjo de máscara de entrada.
+
+49
+00:03:20,690 --> 00:03:25,350
+E isto é comumente referido como
+kernel de convolução, mas
+
+50
+00:03:25,350 --> 00:03:30,890
+infelizmente em CUDA, kernel também tem o sentido
+de funções kernel.
+
+51
+00:03:30,890 --> 00:03:36,210
+De modo a evitar confusão, nós não chamaremos...
+chamaremos isto de
+
+52
+00:03:36,210 --> 00:03:41,610
+kernels de convolução de máscaras, mas nós lhes
+chamaremos máscaras de convolução.
+
+53
+00:03:41,610 --> 00:03:43,360
+E a mesma
+
+54
+00:03:43,360 --> 00:03:47,970
+máscara de convolução é geralmente usada para
+calcular todos
+
+55
+00:03:47,970 --> 00:03:52,070
+os elementos de saída em uma computação
+particular de convolução.
+
+56
+00:03:53,070 --> 00:03:57,840
+Logo, aqui está um exemplo bem simples de
+um exemplo de uma convolução unidimensional.
+
+57
+00:03:57,840 --> 00:04:01,040
+E aqui nós mostramos uma máscara de cinco elementos.
+
+58
+00:04:01,040 --> 00:04:05,116
+E a fim de calcular um elemento de
+saída, nós
+
+59
+00:04:05,116 --> 00:04:08,650
+pegaremos seu elemento de entrada correspondente, e 
+
+60
+00:04:08,650 --> 00:04:12,810
+pegaremos a máscara e alinhamos esta máscara...
+o meio...
+
+61
+00:04:12,810 --> 00:04:16,780
+o centro da máscara com o elemento de
+entrada correspondente.
+
+62
+00:04:16,780 --> 00:04:22,870
+Assim, neste caso, teremos... iremos
+calcular P[2] na saída.
+
+63
+00:04:22,870 --> 00:04:27,840
+E a entrada correspondente é N[2] e
+então nós pegaremos o
+
+64
+00:04:27,840 --> 00:04:32,350
+centro da máscara, que é M[2], e nós
+alinharemos o M[2] com o N[2].
+
+65
+00:04:32,350 --> 00:04:33,062
+De modo que
+
+66
+00:04:33,062 --> 00:04:38,950
+M[0] será alinhado a N[0], M[1] será
+alinhado a N[1].
+
+67
+00:04:38,950 --> 00:04:40,110
+E assim por diante.
+
+68
+00:04:40,110 --> 00:04:45,320
+E isto, após este alinhamento faremos uma
+multiplicação de pares.
+
+69
+00:04:45,320 --> 00:04:51,534
+É assim que fazemos a parte ponderada.
+E a multiplicação de pares
+
+70
+00:04:51,534 --> 00:04:57,960
+nos dará 1 vezes 3 que é 3 e então 2
+vezes 4 que é 8 aqui.
+
+71
+00:04:57,960 --> 00:05:03,940
+E então 3 vezes 5 que é 15.
+E então 4 vezes 4 que é 16, e assim por diante.
+
+72
+00:05:03,940 --> 00:05:07,420
+E então, uma vez que temos todos estes
+
+73
+00:05:07,420 --> 00:05:09,670
+produtos, nos os somamos.
+
+74
+00:05:09,670 --> 00:05:13,200
+Assim, é por isso que é o cálculo
+de uma soma ponderada.
+
+75
+00:05:13,200 --> 00:05:15,370
+E uma vez que somamos todos estes cinco
+
+76
+00:05:15,370 --> 00:05:20,280
+valores, eles se tornam o valor de saída, 57,
+em P[2].
+
+77
+00:05:21,410 --> 00:05:23,400
+Assim...
+
+78
+00:05:23,400 --> 00:05:29,730
+... em geral nos geralmente usamos
+frações para os valores de máscara.
+
+79
+00:05:29,730 --> 00:05:31,660
+Assim não produzimos
+
+80
+00:05:31,660 --> 00:05:34,500
+valores cada vez maiores conforme calculamos
+a soma ponderada.
+
+81
+00:05:34,500 --> 00:05:38,940
+Porém, para este exemplo em particular, para
+simplificar, nós usaremos valores inteiros.
+
+82
+00:05:38,940 --> 00:05:45,710
+Apenas para que isto seja fácil para você
+ver o padrão computacional.
+
+83
+00:05:45,710 --> 00:05:49,230
+Quando calculamos o próximo elemento P[3]
+
+84
+00:05:49,230 --> 00:05:53,365
+usamos novamente a mesma máscara.
+Porém, agora o centro da máscara
+
+85
+00:05:53,365 --> 00:05:57,031
+não está alinhado com o elemento de
+entrada correspondente N[3].
+
+86
+00:05:58,090 --> 00:06:02,935
+Assim agora alinharemos N[1] com M[0] e
+
+87
+00:06:02,935 --> 00:06:08,210
+N[2] com M[1], e assim por diante.
+E ainda será calculado
+
+88
+00:06:08,210 --> 00:06:14,350
+fazendo o mesmo cálculo de soma ponderada.
+Assim temos 2 vezes 3, que é
+
+89
+00:06:14,350 --> 00:06:18,570
+6 aqui.
+E então 3 vezes 4, que é 12 aqui.
+
+90
+00:06:18,570 --> 00:06:21,270
+E assim, nós terminamos todos os cálculos.
+
+91
+00:06:21,270 --> 00:06:27,280
+Nós... nós somamos todos os produtos na
+resposta para P[3].
+
+92
+00:06:27,280 --> 00:06:33,570
+Logo, agora como pode ver, pegando a mesma
+máscara e deslocando a máscara através
+
+93
+00:06:33,570 --> 00:06:39,670
+de cada elemento de entrada, poderemos
+produzir cada elemento de saída conforme
+
+94
+00:06:39,670 --> 00:06:41,850
+continuamos esta computação.
+
+95
+00:06:41,850 --> 00:06:48,670
+E também pode ver isto porque os
+cálculos de P[2], P[3], e assim por diante,
+
+96
+00:06:48,670 --> 00:06:54,290
+são independentes uns dos outros, logo esta é
+intrinsicamente uma computação bastante paralela.
+
+97
+00:06:56,790 --> 00:06:59,880
+Convolução também tem condições de fronteira.
+
+98
+00:06:59,880 --> 00:07:05,170
+Quando calculamos um elemento de saída que está
+perto do começo ou do fim do
+
+99
+00:07:05,170 --> 00:07:10,670
+arranjo de saída, nos iremos enfrentar
+algumas condições de fronteira.
+
+100
+00:07:10,670 --> 00:07:14,080
+Por exemplo, quando nós calculamos P[1] nós
+
+101
+00:07:14,080 --> 00:07:18,270
+precisamos de ter dois valores de entrada
+à esquerda.
+
+102
+00:07:18,270 --> 00:07:22,280
+Infelizmente, nós teremos apenas um elemento
+de entrada no intervalo válido.
+
+103
+00:07:22,280 --> 00:07:27,485
+Assim, nós teremos... nós necessariamente
+teremos um dos elementos da máscara pareados com um
+
+104
+00:07:27,485 --> 00:07:33,310
+elemento inexistente.
+Isto é o que chamamos de elemento fantasma.
+
+105
+00:07:33,310 --> 00:07:37,450
+E este elemento não existe na entrada, porém
+
+106
+00:07:37,450 --> 00:07:41,220
+quando calculamos uma das saídas que
+estão próximas
+
+107
+00:07:41,220 --> 00:07:43,880
+à fronteira, nos precisaremos ter algum
+
+108
+00:07:43,880 --> 00:07:48,230
+tipo de política para determinar o valor
+destes elementos inexistentes,
+
+109
+00:07:48,230 --> 00:07:52,860
+e há várias políticas que podemos usar.
+
+110
+00:07:52,860 --> 00:07:58,150
+Por exemplo, nós podemos justamenter dizer
+- olhe, para todos os elementos inexistentes teremos
+
+111
+00:07:58,150 --> 00:08:01,840
+valores zero - os quais usaremos nas
+tarefas de laboratório.
+
+112
+00:08:01,840 --> 00:08:08,000
+Mas em algumas das aplicações eles também...
+...eles podem ter uma política onde nós
+
+113
+00:08:08,000 --> 00:08:14,290
+diremos okay, todos os elementos inexistentes
+serão assumidos com o mesmo valor de
+
+114
+00:08:14,290 --> 00:08:16,520
+P[0].
+
+115
+00:08:16,520 --> 00:08:20,470
+Assim, está é também uma política válida
+e, dependendo da
+
+116
+00:08:20,470 --> 00:08:26,260
+aplicação, poderemos ter diferentes políticas
+para determinar estes elementos fantasmas.
+
+117
+00:08:26,260 --> 00:08:30,010
+E assim, como mencionei em nossas tarefas
+de laboratório, nós 
+
+118
+00:08:30,010 --> 00:08:33,060
+assumiremos que todos os elementos inexistentes
+
+119
+00:08:33,060 --> 00:08:36,100
+somente assumirão o valor zero em nossos
+cálculos.
+
+120
+00:08:38,510 --> 00:08:45,410
+Aqui está um kernel simples que faz
+convolução 1D em CUDA.
+
+121
+00:08:45,410 --> 00:08:50,440
+E iremos, vocês sabem, pegar diversas entradas.
+
+122
+00:08:50,440 --> 00:08:56,450
+O arranjo de entrada N, e então o arranjo de
+máscara M.
+
+123
+00:08:56,450 --> 00:09:00,170
+E teremos o comprimento da máscara
+
+124
+00:09:00,170 --> 00:09:03,700
+que é o número de elementos
+
+125
+00:09:03,700 --> 00:09:06,320
+na máscara e finalmente o comprimento, que é
+
+126
+00:09:06,320 --> 00:09:10,310
+o número de elementos no arranjo de entrada.
+
+127
+00:09:10,310 --> 00:09:15,480
+É claro, precisaremos ter a saída,
+o apontador para o arranjo de saída P.
+
+128
+00:09:15,480 --> 00:09:20,960
+Bem, esta é uma expressão bem familiar para
+você
+
+129
+00:09:20,960 --> 00:09:25,540
+que associa uma thread para cada um dos
+elementos de saída.
+
+130
+00:09:25,540 --> 00:09:28,970
+Bem, esta... esta é uma expressão bastante
+familiar.
+
+131
+00:09:28,970 --> 00:09:32,420
+e então para o elemento de saída em particular
+
+132
+00:09:32,420 --> 00:09:35,730
+iremos iniciar este valor com zero.
+
+133
+00:09:35,730 --> 00:09:40,640
+E lembre-se que no arranjo de entrada,
+precisamos
+
+134
+00:09:40,640 --> 00:09:45,910
+ter diversos elementos vizinhos de modo que
+o começo da vizinhança de entrada
+
+135
+00:09:45,910 --> 00:09:50,910
+que usaremos para calcular um elemento
+em particular é metade
+
+136
+00:09:50,910 --> 00:09:56,100
+da máscara à esquerda para o
+cálculo 1D.
+
+137
+00:09:56,100 --> 00:10:01,225
+Em nosso slide anterior vimos que quando
+calculamos
+
+138
+00:10:01,225 --> 00:10:06,240
+P[3], precisamos ter N[1] como
+início da vizinhança.
+
+139
+00:10:06,240 --> 00:10:09,390
+Então, pegamos a máscara cujo comprimento
+
+140
+00:10:09,390 --> 00:10:12,910
+é cinco dividido por dois, que nos dá 
+
+141
+00:10:12,910 --> 00:10:15,190
+metade do comprimento, porque é um número impar
+
+142
+00:10:15,190 --> 00:10:20,540
+e a divisão de inteiros do C
+
+143
+00:10:20,540 --> 00:10:25,390
+truncará o valor de saída.
+Assim, obteremos o valor dois.
+
+144
+00:10:25,390 --> 00:10:32,640
+Isto nos dá o elemento que está a duas posições
+antes do elemento de entrada correspondente.
+
+145
+00:10:32,640 --> 00:10:36,980
+Assim, isto é como calculamos este
+ponto inicial da entrada.
+
+146
+00:10:36,980 --> 00:10:39,480
+O ponto inicial é o começo da vizinhança
+
+147
+00:10:39,480 --> 00:10:42,730
+que estamos usando para o cálculo
+da soma ponderada.
+
+148
+00:10:42,730 --> 00:10:45,780
+Uma vez que entendeu a variável de
+
+149
+00:10:45,780 --> 00:10:50,930
+ponto de entrada, podemos ir nesta
+vizinhança para fazer
+
+150
+00:10:50,930 --> 00:10:56,670
+o cálculo da soma ponderada iterando sobre
+
+151
+00:10:56,670 --> 00:11:02,150
+todos os elementos da máscara e seus
+elementos de entrada correspondentes.
+
+152
+00:11:02,150 --> 00:11:05,339
+Começaremos com N pontos iniciais e N,
+
+153
+00:11:05,339 --> 00:11:10,530
+que começará com o elemento zero,
+fará o produto do par.
+
+154
+00:11:10,530 --> 00:11:11,060
+Ou seja,
+
+155
+00:11:11,060 --> 00:11:12,611
+a componente j.
+
+156
+00:11:12,611 --> 00:11:19,758
+Uma vez feito a multiplicação dos pares, nós
+acumulamos o produto em Pvalue.
+
+157
+00:11:19,758 --> 00:11:24,980
+Uma vez percorrida toda a extensão da máscara,
+
+158
+00:11:24,980 --> 00:11:27,740
+então nós temos calculada a soma ponderada
+desta vizinhança.
+
+159
+00:11:28,890 --> 00:11:32,500
+Durante o cálculo, também precisamos
+tomar cuidado com
+
+160
+00:11:32,500 --> 00:11:36,500
+que o ponto inicial que usamos está,
+na realidade
+
+161
+00:11:36,500 --> 00:11:38,430
+vocês sabem, bem, dentro do intervalo válido.
+
+162
+00:11:38,430 --> 00:11:42,042
+Logo, pegamos um ponto inicial (o N_start_point)
+mais j e
+
+163
+00:11:42,042 --> 00:11:45,018
+verificamos se é maior ou igual à 0.
+
+164
+00:11:45,018 --> 00:11:48,560
+E se isto não for maior ou igual à zero,
+não iremos
+
+165
+00:11:48,560 --> 00:11:53,100
+fazer o cálculo, que significa que
+assumimos que o elemento fantasma é 0.
+
+166
+00:11:53,100 --> 00:11:57,340
+Quanto temos o 0, o elemento fantasma não
+afetará a soma ponderada.
+
+167
+00:11:57,340 --> 00:12:00,140
+Logo, não precisamos fazer este acúmulo.
+
+168
+00:12:00,140 --> 00:12:02,140
+O mesmo teste também é
+
+169
+00:12:02,140 --> 00:12:03,830
+feito no lado direito.
+
+170
+00:12:03,830 --> 00:12:07,330
+Ou seja, quando o N_start_point mais j,
+
+171
+00:12:07,330 --> 00:12:10,000
+o elemento de entrada que estamos usando para
+
+172
+00:12:10,000 --> 00:12:12,970
+esta soma ponderada, é maior ou igual ao
+
+173
+00:12:12,970 --> 00:12:16,380
+comprimento, então nós também assumimos que
+
+174
+00:12:16,380 --> 00:12:20,160
+eles são... estes elementos fantasmas são
+valores 0.
+
+175
+00:12:20,160 --> 00:12:26,760
+Logo, iremos pular estes passos de acúmulo
+assumindo que estes valores são 0.
+
+176
+00:12:26,760 --> 00:12:27,240
+Então, este
+
+177
+00:12:27,240 --> 00:12:32,920
+laço for em particular com o teste
+condicional if implementa essencialmente
+
+178
+00:12:32,920 --> 00:12:38,860
+a política de que todos os elementos fantasmas
+fora do intervalo válido tem valor 0.
+
+179
+00:12:38,860 --> 00:12:42,340
+Uma vez terminado o cálculo da
+soma ponderada,
+
+180
+00:12:42,340 --> 00:12:46,000
+Temos a resposta para o elemento de saída em
+Pvalue.
+
+181
+00:12:46,000 --> 00:12:48,290
+Agora podemos escrever Pvalue
+
+182
+00:12:48,290 --> 00:12:52,370
+na sua posição correspondente no
+arranjo de saída.
+
+183
+00:12:55,830 --> 00:12:59,560
+Agora que você entende a convolução
+1D,
+
+184
+00:12:59,560 --> 00:13:04,730
+a convolução 2D é uma generalização
+bastante direta da convolução 1D.
+
+185
+00:13:04,730 --> 00:13:12,920
+Nós temos uma saída em um arranjo 2D e
+este é calculado
+
+186
+00:13:12,920 --> 00:13:18,330
+baseado no elemento correspondente no
+arranjo de entrada bidimensional.
+
+187
+00:13:18,330 --> 00:13:21,030
+E sempre que calculamos uma saída, nos
+pegamos
+
+188
+00:13:21,030 --> 00:13:26,130
+o elemento de entrada correspondente e
+temos uma vizinhança bidimensional.
+
+189
+00:13:26,130 --> 00:13:30,840
+E a usaremos, e a máscara
+
+190
+00:13:30,840 --> 00:13:35,900
+agora será um arranjo bidimensional
+que definirá a vizinhança.
+
+191
+00:13:35,900 --> 00:13:41,290
+Novamente, nós usaremos a multiplicação
+de pares, logo 1 vezes
+
+192
+00:13:41,290 --> 00:13:46,460
+1 é 1 aqui e então 2 vezes 2 é 4, logo nós
+vemos o elemento
+
+193
+00:13:46,460 --> 00:13:48,580
+4 no produto.
+
+194
+00:13:48,580 --> 00:13:54,360
+Assim esta é a saída da multiplicação
+de pares de todos os elementos envolvidos.
+
+195
+00:13:54,360 --> 00:13:55,590
+E então fazemos a soma.
+
+196
+00:13:55,590 --> 00:14:00,430
+Nós simplesmente fazemos uma soma deste
+arranjo de produtos
+
+197
+00:14:00,430 --> 00:14:05,450
+na resposta final.
+Novamente vemos que o elemento de saída
+
+198
+00:14:05,450 --> 00:14:11,590
+é simplesmente uma soma ponderada de todos
+os elementos na vizinhança
+
+199
+00:14:11,590 --> 00:14:14,840
+definida por este e elemento de entrada
+correspondente.
+
+200
+00:14:17,830 --> 00:14:20,380
+Tal como na convolução 1D, a
+
+201
+00:14:20,380 --> 00:14:24,040
+convolução 2D também pode ter condições
+de fronteira.
+
+202
+00:14:24,040 --> 00:14:30,910
+Quando nós calculamos a o elemento de saída
+que está próximo das beiradas do arranjo
+
+203
+00:14:30,910 --> 00:14:33,210
+poderemos ter a situação em que
+
+204
+00:14:33,210 --> 00:14:37,570
+a vizinhança se estenderá além da
+entrada válida.
+
+205
+00:14:37,570 --> 00:14:43,190
+Neste caso nós também assumimos que todos
+os elementos fantasmas são todos 0.
+
+206
+00:14:43,190 --> 00:14:47,020
+Quando vêem o... quando escrevem um
+kernel de convolução 2D
+
+207
+00:14:47,020 --> 00:14:51,080
+vocês devem ter um teste condicional similar
+nesse laço for.
+
+208
+00:14:51,080 --> 00:14:55,380
+É somente que o laço for agora deve ser um
+laço for bidimensional que percorre
+
+209
+00:14:55,380 --> 00:15:01,132
+ambas dimensões X e Y, para calcular a
+soma ponderada de uma área
+
+210
+00:15:01,132 --> 00:15:06,900
+bidimensional ao invés de uma área
+unidimensional.
+
+211
+00:15:06,900 --> 00:15:08,952
+Assim isto conclui a introdução
+
+212
+00:15:08,952 --> 00:15:14,400
+à computação de convolução.
+E então com isto, se estiver interessado
+
+213
+00:15:14,400 --> 00:15:19,140
+em aprender mais sobre computação de
+convolução, gostaria de
+
+214
+00:15:19,140 --> 00:15:24,380
+encorajá-los a ler as seções 8.1
+e 8.2 do livro-texto.
+
+
+215
+00:15:24,380 --> 00:15:25,697
+Obrigado.
+

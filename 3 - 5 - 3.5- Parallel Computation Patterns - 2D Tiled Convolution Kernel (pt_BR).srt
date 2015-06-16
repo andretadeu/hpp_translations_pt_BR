@@ -1,0 +1,1228 @@
+1
+00:00:00,370 --> 00:00:01,050
+[MÚSICA]
+
+2
+00:00:05,570 --> 00:00:06,280
+Olá a todos.
+
+3
+00:00:06,280 --> 00:00:09,470
+Bem-vindos de volta ao curso de Programação
+Paralela Heterogênea.
+
+4
+00:00:09,470 --> 00:00:12,500
+Estamos na aula 3.5 e iremos
+
+5
+00:00:12,500 --> 00:00:17,670
+discutir o desenvolvimento de um kernel
+de convolução seccionada bidimensional.
+
+6
+00:00:17,670 --> 00:00:21,190
+Na aula anterior nós já
+
+7
+00:00:21,190 --> 00:00:24,800
+discutimos como escrever um kernel de
+convolução
+
+8
+00:00:24,800 --> 00:00:27,140
+seccionada unidimensional e nesta aula nós
+
+9
+00:00:27,140 --> 00:00:31,000
+estenderemos este conceito em arquivos de
+imagens
+
+10
+00:00:31,000 --> 00:00:34,700
+reais que geralmente são as aplicações de
+
+11
+00:00:34,700 --> 00:00:39,030
+Convolução Bidimensional e em seguida
+discutiremos algumas
+
+12
+00:00:39,030 --> 00:00:41,730
+das coisas que são mais específicas ao
+
+13
+00:00:41,730 --> 00:00:48,100
+aspecto do processamento de imagens de
+duas dimensões, convolução bidimensional.
+
+14
+00:00:48,100 --> 00:00:51,070
+O objetivo desta aula é para você
+aprender como
+
+15
+00:00:51,070 --> 00:00:56,110
+escrever um kernel de convolução bidimensional
+para o processamento de imagens e assim
+
+16
+00:00:56,110 --> 00:01:01,890
+olharemos aos tipos de dados de imagens de duas
+dimensões e funções de API e aprenderemos
+
+17
+00:01:01,890 --> 00:01:08,800
+como usar o cache constante para melhorar
+a performance para a máscara.
+
+18
+00:01:08,800 --> 00:01:10,720
+Em seguida discutiremos como
+
+19
+00:01:10,720 --> 00:01:13,830
+estender os conceitos de seções de entrada
+versus seções
+
+20
+00:01:13,830 --> 00:01:17,380
+de saída, mapeamento de thread para índice
+de dados e manipulação
+
+21
+00:01:17,380 --> 00:01:21,380
+de condições de fronteira de uma dimensão
+para duas dimensões.
+
+22
+00:01:24,340 --> 00:01:28,300
+Enquanto este slide mostra o conceito de
+
+23
+00:01:28,300 --> 00:01:33,612
+uma representação matricial de uma imagem
+típica em pacotes de aplicação.
+
+24
+00:01:33,612 --> 00:01:40,660
+Bem... hum... em muitas, muitas vezes nós
+acharemos desejável
+
+25
+00:01:40,660 --> 00:01:47,830
+encher cada linha de uma matrix bidimensional
+em múltiplos do comprimento em bytes
+de uma rajada de DRAM.
+
+26
+00:01:47,830 --> 00:01:49,480
+Em um monte de aplicações
+
+27
+00:01:49,480 --> 00:01:54,410
+reais os desenvolvedores frequentemente
+percebem
+
+28
+00:01:54,410 --> 00:01:59,430
+que é desejável ou vantajoso,
+
+29
+00:01:59,430 --> 00:02:05,350
+vocês sabem, encher elementos em cada linha.
+
+30
+00:02:05,350 --> 00:02:10,070
+Logo o tamanho de cada linha se torna
+múltiplo do comprimento em bytes
+de uma rajada de DRAM.
+
+31
+00:02:10,070 --> 00:02:15,230
+E começando na primeira linha pela primeira
+fronteira com o enchimento,
+
+32
+00:02:15,230 --> 00:02:20,090
+cada linha subsequente também iniciará em
+uma fronteira múltipla do comprimento
+em bytes de uma rajada de DRAM.
+
+33
+00:02:20,090 --> 00:02:25,000
+Assim isto essencialmente permite ao programa
+
+34
+00:02:25,000 --> 00:02:30,060
+ser capaz de ter controle melhor na
+utilização de rajadas de DRAM em
+
+35
+00:02:30,060 --> 00:02:35,630
+seus acessos à dados.
+E se olharmos à matriz com
+
+36
+00:02:35,630 --> 00:02:40,520
+enchimento nós, porque estamos adicionando elementos
+a cada linha,
+
+37
+00:02:40,520 --> 00:02:45,492
+efetivamente estamos adicionando colunas
+inteiras nestas matrizes.
+
+38
+00:02:45,492 --> 00:02:50,598
+Aqui temos um exemplo simples, se
+assumirmos que temos uma
+
+39
+00:02:50,598 --> 00:02:56,200
+matriz 3 por 3, e se o comprimento
+em bytes das
+
+40
+00:02:56,200 --> 00:03:00,910
+rajadas da DRAM é de quatro elementos então podemos...
+precisamos adicionar mais
+
+41
+00:03:00,910 --> 00:03:05,820
+um elemento ou encher mais um elemento em
+cada linha para tornar a
+
+42
+00:03:05,820 --> 00:03:12,850
+sua linha do tamanho da rajada.
+Neste caso o "pitch" será de quatro
+
+43
+00:03:12,850 --> 00:03:18,620
+e então será uma a mais do que o comprimento.
+Neste exemplo,
+
+44
+00:03:18,620 --> 00:03:24,240
+a altura é 3, o comprimento é 3 e
+então o "pitch" é 4.
+
+45
+00:03:24,240 --> 00:03:29,150
+A maioria das imagens hoje são imagens
+coloridas.
+
+46
+00:03:29,150 --> 00:03:31,290
+O que significa que cada pixel
+
+47
+00:03:31,290 --> 00:03:37,240
+não é um único valor mas é na verdade uma
+combinação de canais de cores.
+
+48
+00:03:37,240 --> 00:03:40,800
+E que a representação mais comum de uma
+imagem
+
+49
+00:03:40,800 --> 00:03:45,630
+colorida é composta por R, G, e B,
+vermelho, verde e azul.
+
+50
+00:03:45,630 --> 00:03:51,420
+Bem... ahn... cada pixel tipicamente terá
+três valores em vez de um e
+
+51
+00:03:51,420 --> 00:03:56,320
+neste exemplo nós não temos múltiplos
+valores
+
+52
+00:03:56,320 --> 00:04:02,040
+em cada elemento, portanto neste exemplo
+podemos dizer que apenas há um canal.
+
+53
+00:04:02,040 --> 00:04:06,958
+Contudo, neste exercício-programa vocês
+precisarão ser capazes de processar
+
+54
+00:04:06,958 --> 00:04:12,540
+uma imagem colorida com três canais em
+cada pixel.
+
+55
+00:04:12,540 --> 00:04:16,770
+O enchimento é tipicamente feito
+
+56
+00:04:16,770 --> 00:04:21,940
+automaticamente pela alocação da matriz ou
+pela importação de funções para matrizes.
+
+57
+00:04:21,940 --> 00:04:27,210
+E a implementação destas funções
+tipicamente olhará para a configuração
+
+58
+00:04:27,210 --> 00:04:32,930
+de rajadas de DRAM do hardware e opcionalmente
+adicionam-se os elementos preenchidos.
+
+59
+00:04:32,930 --> 00:04:36,470
+De modo que quando chamar a mesma
+
+60
+00:04:36,470 --> 00:04:39,530
+biblioteca de funções, dependendo do hardware
+em que está
+
+61
+00:04:39,530 --> 00:04:43,310
+rodando a aplicação, você pode obter
+diferentes quantidades de elementos de
+
+62
+00:04:43,310 --> 00:04:47,270
+enchimento ou um valor de "pitch" diferente
+quando se obtém
+
+63
+00:04:47,270 --> 00:04:51,730
+a matriz destas funções.
+
+64
+00:04:51,730 --> 00:04:56,080
+Esta é a imagem que gostaria que
+lembrassem sobre "pitch" quando
+
+65
+00:04:56,080 --> 00:05:00,370
+você processar imagens.
+Abaixo mostramos que aqui
+
+66
+00:05:00,370 --> 00:05:06,160
+há uma matriz com enchimento, conceitualmente,
+uma matriz com uma coluna
+
+67
+de enchimento e então nós dispomos a
+matriz em uma linha contínua (em ordem ascendente de linhas)
+
+68
+00:05:12,510 --> 00:05:17,870
+na memória você verá que há um elemento
+extra no fim de cada
+
+69
+00:05:17,870 --> 00:05:23,490
+linha na disposição dos elementos e
+estes elementos são inexistente.
+
+70
+00:05:23,490 --> 00:05:31,820
+Assim, a parte importante é quando começamos a
+usar índice de acesso a elementos linearizados.
+
+71
+00:05:32,960 --> 00:05:37,990
+Precisamos usar o "pitch" ao invés do
+comprimento original
+
+72
+00:05:37,990 --> 00:05:40,910
+quando pulamos linhas inteiras.
+
+73
+00:05:40,910 --> 00:05:47,210
+Assim podemos dizer, se quisermos acessar o
+elemento o M(2,1) e então
+
+74
+00:05:47,210 --> 00:05:53,270
+originalmente nós multiplicaríamos 2 pelo
+comprimento que é 3, mais a coluna.
+
+75
+00:05:53,270 --> 00:05:58,320
+Todavia por causa do enchimento nós,
+na verdade, precisamos multiplicar o índice da linha
+
+76
+00:05:58,320 --> 00:06:03,320
+pelo valor do "pitch", de modo que são pulados
+elementos suficientes e
+
+77
+00:06:03,320 --> 00:06:07,550
+então conseguimos chegar ao elemento
+correto em M.
+
+78
+00:06:07,550 --> 00:06:13,020
+A fim de acessar o elemento M(2,1) precisamos
+multiplicar 2 pelo
+
+79
+00:06:13,020 --> 00:06:18,750
+valor do "pitch", que é 4 e então somamos
+um, que é o índice da coluna.
+
+80
+00:06:18,750 --> 00:06:20,230
+Isto dá 9.
+
+81
+00:06:20,230 --> 00:06:24,950
+Isto é o que nos leva ao efeito de M(9),
+
+82
+00:06:24,950 --> 00:06:28,350
+Que na verdade é, vocês sabem, o que
+incluirá o efeito
+
+83
+00:06:28,350 --> 00:06:30,590
+dos elementos de enchimento
+
+84
+00:06:30,590 --> 00:06:36,970
+M(3) e M(7) que não existiam na matriz
+original.
+
+85
+00:06:38,650 --> 00:06:42,690
+Agora que você entende o conceito do
+"pitch" e dos canais,
+
+86
+00:06:44,770 --> 00:06:49,930
+nós mostramos um resumo do tipo da
+matriz de imagem que
+
+87
+00:06:49,930 --> 00:06:54,680
+será usado no curso de
+Programação Paralela Heterogênea.
+
+88
+00:06:54,680 --> 00:07:00,200
+Este é o tipo de dados que
+assumiremos para as imagens.
+
+89
+00:07:00,200 --> 00:07:03,900
+E isto, vocês sabem, 
+
+90
+00:07:03,900 --> 00:07:07,420
+será usado somente no "host code" do exercício-programa.
+
+91
+00:07:07,420 --> 00:07:09,940
+E no momento em que evocar seu kernel você
+
+92
+00:07:09,940 --> 00:07:13,510
+deve extrair os dados, o comprimento,
+a altura,
+
+93
+00:07:13,510 --> 00:07:18,380
+e o "pitch", e enviá-los ao kernel para
+que este processe os dados.
+
+94
+00:07:18,380 --> 00:07:21,180
+Bem, quando olhar para o "host code",
+deverá
+
+95
+00:07:21,180 --> 00:07:24,830
+ficar claro para você o que o "host code"
+está fazendo.
+
+96
+00:07:24,830 --> 00:07:30,180
+Está de fato lendo uma imagem com as
+cores de luz verdadeiras de um arquivo e então
+
+97
+00:07:30,180 --> 00:07:35,140
+populará os valores nestes campos nos
+
+98
+00:07:35,140 --> 00:07:37,700
+dados da imagem e então o "host code"
+
+99
+00:07:37,700 --> 00:07:41,530
+extrairá estes valores. Mas antes
+lançará
+
+100
+00:07:41,530 --> 00:07:47,660
+o kernel ou fará a cópia dos dados
+da memória do host na memória do dispositivo.
+
+101
+00:07:48,790 --> 00:07:53,800
+Bem, aqui está algumas das funções da API
+que verá no "host code".
+
+102
+00:07:53,800 --> 00:08:00,260
+Basicamente, podemos alocar a nova
+imagem, logo isto será
+
+103
+00:08:00,260 --> 00:08:05,810
+feito para a imagem de saída e podemos
+importar a imagem no processo.
+
+104
+00:08:05,810 --> 00:08:11,770
+Também alocaremos memória para a
+imagem de entrada, assim isto é feito pela
+
+105
+00:08:11,770 --> 00:08:16,520
+função wbImport, e também temos um
+bocado de
+
+106
+00:08:16,520 --> 00:08:20,470
+funções utilitárias que nos ajudam a
+extrair as
+
+107
+00:08:20,470 --> 00:08:23,710
+informações relevantes do objeto, como
+o comprimento
+
+108
+00:08:23,710 --> 00:08:25,630
+da imagem, a altura da imagem,
+
+109
+00:08:25,630 --> 00:08:27,980
+o número de canais em cada pixel
+da imagem,
+
+110
+00:08:27,980 --> 00:08:31,640
+e então conseguimos pegar o "pitch"
+da imagem.
+
+111
+00:08:31,640 --> 00:08:36,920
+Mas todas estes valores podem ser extraídos
+por estas funções,
+
+112
+00:08:36,920 --> 00:08:41,930
+de modo que podemos definir as propriedades
+de configuração quando lançamos kernels.
+
+113
+00:08:41,930 --> 00:08:46,900
+Por simplicidade o "pitch" para todas as
+matrizes
+
+114
+00:08:46,900 --> 00:08:51,240
+neste exercício-programa será
+
+115
+00:08:51,240 --> 00:08:54,630
+definido para comprimento vezes o número de canais.
+
+116
+00:08:54,630 --> 00:08:59,700
+Isto significa que não há elementos
+de enchimento.
+
+117
+00:08:59,700 --> 00:09:03,320
+Bem, após falarmos sobre estes conceitos,
+acabaremos 
+
+118
+00:09:03,320 --> 00:09:08,400
+o valor do comprimento da imagem no lugar
+do valor do "pitch" em todos os casos.
+
+119
+00:09:08,400 --> 00:09:13,670
+Isto permite a vocês a ter uma forma mais
+simples de escrever seus kernels.
+
+120
+00:09:13,670 --> 00:09:16,520
+Porém, eu quis ter certeza de que
+entenderam
+
+121
+00:09:16,520 --> 00:09:20,100
+o conceito de forma que possam facilmente
+e rapidamente adaptar
+
+122
+00:09:20,100 --> 00:09:23,600
+a função kernel que escreveram neste
+curso para manipular
+
+123
+00:09:23,600 --> 00:09:28,050
+casos reais de imagens onde pode haver
+um "pitch",
+
+124
+00:09:28,050 --> 00:09:30,890
+vocês sabem, um valor que é diferente do
+comprimento.
+
+125
+00:09:30,890 --> 00:09:34,830
+Assim, o uso de todas estas
+funções da API
+
+126
+00:09:34,830 --> 00:09:38,520
+foi feito no "host code" dado a vocês.
+
+127
+00:09:38,520 --> 00:09:41,920
+Logo, vocês não precisam entender os
+detalhes
+
+128
+00:09:41,920 --> 00:09:44,660
+intrincados de todas estas definições de função.
+
+129
+00:09:44,660 --> 00:09:47,610
+Contudo, eu quero ter certeza que eu
+mencionei estas
+
+130
+00:09:47,610 --> 00:09:50,900
+funções a vocês de modo que quando ler
+o "host code",
+
+131
+00:09:50,900 --> 00:09:53,320
+será capaz de entender com
+
+132
+00:09:53,320 --> 00:09:56,070
+mais confiança o que acontece no "host code".
+
+133
+00:09:58,160 --> 00:10:01,340
+Agora estamos prontos para estender os
+conceitos que
+
+134
+00:10:01,340 --> 00:10:07,420
+aprendemos no caso do kernel 1D em um
+kernel de convolução 2D.
+
+135
+00:10:07,420 --> 00:10:11,070
+Nos ainda temos o conceito de comprimento
+de seção de saída,
+
+136
+00:10:11,070 --> 00:10:17,740
+e neste caso, assumimos que o caso 2D,
+assumimos
+
+137
+00:10:17,740 --> 00:10:23,160
+uma seção quadrada e a seção superior ainda
+será menor que
+
+138
+00:10:23,160 --> 00:10:28,870
+a seção de entrada e os blocos de threads
+serão configurados para cobrir
+
+139
+00:10:28,870 --> 00:10:34,670
+todos os elementos da seção de entrada.
+Assumindo uma seção quadrada
+
+140
+00:10:34,670 --> 00:10:40,660
+estaremos... estaremos definindo BLOCK_WIDTH,
+
+141
+00:10:40,660 --> 00:10:46,320
+que é MASK_WIDTH - 1 maior do que
+tamanho da seção de saída (O_TILE_WIDTH),
+
+142
+00:10:46,320 --> 00:10:48,680
+de modo que, em essêncial, obtemos o
+
+143
+00:10:48,680 --> 00:10:50,040
+elemento extra
+
+144
+00:10:50,040 --> 00:10:54,100
+na seção de entrada, que
+
+145
+00:10:54,100 --> 00:10:57,260
+será necessária para gerar toda a
+seção superior.
+
+146
+00:10:57,260 --> 00:11:00,030
+Neste caso, estamos estendendo tanto
+
+147
+00:11:00,030 --> 00:11:03,600
+na direção horizontal quanto na
+direção vertical
+
+148
+00:11:03,600 --> 00:11:06,400
+para ser capazes de coletar todos os
+
+149
+00:11:06,400 --> 00:11:10,500
+elementos de entrada necessários para gerar
+uma seção de saída quadrada.
+
+150
+00:11:10,500 --> 00:11:14,550
+E então, quando definimos os blocos de threads,
+
+151
+00:11:14,550 --> 00:11:20,230
+usaremos o tamanho da seção de entrada,
+que é BLOCK_WIDTH e
+
+152
+00:11:20,230 --> 00:11:26,030
+que é, vocês sabem, MASK_WIDTH - 1
+maior do que O_TILE_WIDTH.
+
+153
+00:11:26,030 --> 00:11:29,190
+E em seguida, aqui, assumimos que o tamanho
+da máscara é 5.
+
+154
+00:11:29,190 --> 00:11:34,250
+E em seguida, em general, devemos
+somente adicionar MASK_WIDTH
+
+155
+00:11:35,300 --> 00:11:40,590
+menos 1 para qualquer tamanho de seção de saída que
+tivermos para obter o tamanho do bloco.
+
+156
+00:11:40,590 --> 00:11:44,160
+E em seguida, vocês sabem, pegaremos o
+comprimento da
+
+157
+00:11:44,160 --> 00:11:48,030
+imagem e a altura da imagem e dividí-los
+pelo
+
+158
+00:11:48,030 --> 00:11:51,780
+comprimento da seção de saída e neste
+resultado aplicar a função de teto, para ter
+
+159
+00:11:51,780 --> 00:11:56,360
+certeza de que teremos blocos de threads
+para gerar todos os elementos de saída.
+
+160
+00:11:56,360 --> 00:12:01,730
+Aqui nós assumimos que a imagem de entrada
+e a imagem de saída são do
+
+161
+00:12:01,730 --> 00:12:06,870
+mesmo comprimento e da mesma altura, que é geralmente
+o caso para a computação de convolução.
+
+162
+00:12:08,860 --> 00:12:14,340
+Agora temos uma oportunidade para
+introduzir memória constante
+
+163
+00:12:14,340 --> 00:12:19,120
+e cacheamento constante em CUDA.
+Se
+
+164
+00:12:19,120 --> 00:12:24,000
+olharmos para o padrão de acesso à
+máscara de convolução, a
+
+165
+00:12:24,000 --> 00:12:29,110
+a máscara é usada por todas as threads.
+Mas não é
+
+166
+00:12:29,110 --> 00:12:33,910
+modificada no kernel de convolução,
+e todas as threads
+
+167
+00:12:33,910 --> 00:12:39,280
+no warp acessarão os mesmos locais
+ma máscara, em um ponto no tempo.
+
+168
+00:12:39,280 --> 00:12:41,330
+Se olharmos para todas as 32 threads
+
+169
+00:12:41,330 --> 00:12:44,490
+no warp, todas essas threads acessarão
+o elemento
+
+170
+00:12:44,490 --> 00:12:47,140
+zero ao mesmo tempo e em seguida acessarão
+
+171
+00:12:47,140 --> 00:12:51,180
+o elemento do arranjo de máscara um ao mesmo tempo
+e assim por diante.
+
+172
+00:12:51,180 --> 00:12:55,070
+Esta é uma situação bastante similar
+a situação onde se
+
+173
+00:12:55,070 --> 00:12:59,450
+tivermos uma constante no programa ou um coeficiente
+em nosso statement
+
+174
+00:12:59,450 --> 00:13:02,320
+então todas as threads executando este
+statement
+
+175
+00:13:02,320 --> 00:13:04,440
+acessarão o mesmo valor.
+
+176
+00:13:04,440 --> 00:13:07,880
+Esta é a origem do nome "memória constante".
+
+177
+00:13:07,880 --> 00:13:12,970
+Estamos armazenando todos esses valores em uma
+memória que será agressivamente cacheada.
+
+178
+00:13:12,970 --> 00:13:17,850
+E em seguida o valor de acesso do cache
+será propagado para todas as threads no
+
+179
+00:13:17,850 --> 00:13:23,630
+warp para, vocês sabem, aumentar ainda mais
+drasticamente a largura de banda da memória...
+
+180
+00:13:23,630 --> 00:13:24,590
+quando...
+
+181
+00:13:24,590 --> 00:13:26,170
+por esse cache.
+
+182
+00:13:26,170 --> 00:13:31,709
+Na nova geração do CUDA, se usarmos os qualificadores const e
+
+183
+00:13:31,709 --> 00:13:37,800
+__restrict__ em frente ao
+
+184
+00:13:37,800 --> 00:13:42,150
+apontador de parâmetro, então o compilador
+será capaz de
+
+185
+00:13:42,150 --> 00:13:47,240
+saber que esta estrutura de dados em particular
+pode ser escolhida para cacheamento constante.
+
+186
+00:13:47,240 --> 00:13:49,970
+Aqui está um exemplo simples de como você
+
+187
+00:13:49,970 --> 00:13:54,790
+pode potencialmente escrever uma função
+kernel e em seguida a
+
+188
+00:13:54,790 --> 00:13:59,940
+função receberá porções de dados da entrada e
+
+189
+00:13:59,940 --> 00:14:03,080
+a altura da imagem, o comprimento da
+imagem, o número de canais
+
+190
+00:14:03,080 --> 00:14:07,990
+na imagem e em seguida também
+precisará receber a máscara.
+
+191
+00:14:07,990 --> 00:14:11,180
+A máscara é, na verdade, um parâmetro
+que precisa
+
+192
+00:14:11,180 --> 00:14:15,716
+ser precedido pelos qualificadores const e __restrict__,
+
+193
+00:14:15,716 --> 00:14:20,210
+de modo que o compilador saiba
+
+194
+00:14:20,210 --> 00:14:24,900
+que os elementos da máscara poder ser
+escolhidos para cacheamento constante.
+
+195
+00:14:26,710 --> 00:14:31,360
+Bem, aqui nós estendemos o conceito
+de seções de entrada e seções
+
+196
+00:14:31,360 --> 00:14:35,930
+de saída em duas dimensões.
+Aqui nós
+
+197
+00:14:35,930 --> 00:14:40,720
+mostramos que quando atribuímos o elemento
+de entrada e
+
+198
+00:14:40,720 --> 00:14:46,080
+o elemento de saída para threads diferentes,
+iremos deslocar o
+
+199
+00:14:46,080 --> 00:14:50,460
+índice de saída em 2 à esquerda e também o
+
+200
+00:14:50,460 --> 00:14:55,580
+índice da coluna de saída em 2 acima
+
+201
+00:14:55,580 --> 00:15:00,840
+de modo que essencialmento movemos cada...
+
+202
+00:15:00,840 --> 00:15:05,780
+a thread 0 será responsável pelo
+elemento do canto da seção de entrada
+
+203
+00:15:05,780 --> 00:15:11,990
+e será também responsável pelo elemento
+do canto da seção de saída.
+
+204
+00:15:11,990 --> 00:15:14,410
+Esta é apenas uma extensão
+
+205
+00:15:14,410 --> 00:15:17,600
+direta do caso unidimensional.
+
+206
+00:15:17,600 --> 00:15:21,200
+Bem, isto permite todas as threads de 0 ao
+
+207
+00:15:21,200 --> 00:15:25,270
+número de threads no bloco de saída, a gerar todos os
+elementos de saída.
+
+208
+00:15:25,270 --> 00:15:31,520
+E em seguida, teremos mais elementos para
+participar do carregamento dos elementos de entrada.
+
+209
+00:15:31,520 --> 00:15:35,810
+Isto nos leva ao carregamento do
+elemento de entrada.
+
+210
+00:15:35,810 --> 00:15:40,110
+Esta também é uma expansão bastante
+direta do caso bidimensional,
+
+211
+00:15:40,110 --> 00:15:42,050
+onde não apenas precisamos testar
+
+212
+00:15:42,050 --> 00:15:46,610
+a nossa horizontal que é o caso do índice
+col_i, mas também
+
+213
+00:15:46,610 --> 00:15:51,660
+precisamos nos assegurar que os índices das
+linhas também estão em um intervalo válido.
+
+214
+00:15:51,660 --> 00:15:57,609
+Sempre que a carga de um valor de entrada
+está dentro do intervalo
+
+215
+00:15:57,609 --> 00:15:59,156
+válido então carregamos o elemento em
+
+216
+00:15:59,156 --> 00:16:02,670
+um arranjo bidimensional de memória compartilhada,
+
+217
+00:16:02,670 --> 00:16:08,350
+indexados pelo índices ty e tx,
+definidos pelos índices de threads y e x.
+
+218
+00:16:08,350 --> 00:16:10,770
+E sempre que este deslocamento ficar fora dos limites,
+
+219
+00:16:10,770 --> 00:16:12,950
+então sabemos que estamos carregando um
+elemento fantasma,
+
+220
+00:16:12,950 --> 00:16:15,520
+logo neste caso em particular ainda
+assumimos que
+
+221
+00:16:15,520 --> 00:16:19,420
+temos a política de definir esses elementos
+para zeros.
+
+222
+00:16:19,420 --> 00:16:23,200
+Aqui vemos este código
+
+223
+00:16:23,200 --> 00:16:29,000
+e temos um acesso à entrada linearizado.
+E se o "pitch"
+
+224
+00:16:29,000 --> 00:16:35,350
+é diferente do comprimento, devemos usar
+o valor do "pitch" nesta modificação.
+
+225
+00:16:35,350 --> 00:16:37,310
+No entanto, como o "pitch" e o comprimento
+são o
+
+226
+00:16:37,310 --> 00:16:39,870
+mesmo em nossos exercícios-programa, podemos
+usar direto o comprimento.
+
+227
+00:16:39,870 --> 00:16:44,690
+Sempre que precisar estender este kernel
+para um kernel de processamento de imagens
+
+228
+00:16:44,690 --> 00:16:48,380
+mais geral, então precisará usar o
+valor do pitch e precisará fornecer
+
+229
+00:16:48,380 --> 00:16:52,350
+este valor do "pitch" no kernel para
+acesso apropriado.
+
+230
+00:16:55,150 --> 00:17:01,300
+E sempre que, uma vez que terminamos de carregar,
+lembrem-se que precisam usar a sincronização
+
+231
+00:17:01,300 --> 00:17:06,800
+de barreira entre estas duas - a carga e a computação.
+
+232
+00:17:06,800 --> 00:17:09,100
+Quando entramos na computação, tal como
+
+233
+00:17:09,100 --> 00:17:13,730
+o caso unidimensional, apenas as threads
+
+234
+00:17:13,730 --> 00:17:18,970
+dentro do intervalo da seção de saída
+devem participar da computação.
+
+235
+00:17:18,970 --> 00:17:20,290
+E em seguida,
+
+236
+00:17:20,290 --> 00:17:23,210
+não só testaremos o índice da thread x
+
+237
+00:17:24,510 --> 00:17:27,660
+mas também o índice da thread y.
+
+238
+00:17:27,660 --> 00:17:30,610
+Caso contrário, é uma extensão direta com a
+
+239
+00:17:30,610 --> 00:17:32,370
+adição de um outro laço, de modo que
+
+240
+00:17:32,370 --> 00:17:37,110
+teremos de fazer um acesso bidimensional à
+memória compartilhada e à máscara,
+
+241
+00:17:37,110 --> 00:17:40,070
+e acumula-se na variável output.
+
+242
+00:17:43,190 --> 00:17:45,800
+Ao final do kernel escreveremos
+a variável output,
+
+243
+00:17:45,800 --> 00:17:51,060
+e precisaremos testar se o índice da linha
+
+244
+00:17:51,060 --> 00:17:56,690
+e o índice da coluna dos índices de saída
+estão dentro do intervalo válido.
+
+245
+00:17:56,690 --> 00:17:58,960
+Isto nos assegura que não acabemos por
+
+246
+00:17:58,960 --> 00:18:02,910
+gravar em um local inexistente ou
+elementos fantasmas.
+
+247
+00:18:02,910 --> 00:18:09,020
+Isto nos dá a expressão para
+escrever na saída.
+
+248
+00:18:09,020 --> 00:18:13,756
+Até agora discutimos o código em
+
+249
+00:18:13,756 --> 00:18:18,880
+termos de um formato de canal de pixel único.
+
+250
+00:18:18,880 --> 00:18:23,620
+E precisará olhar na descrição do
+exercício-programa no
+
+251
+00:18:23,620 --> 00:18:29,540
+WebGPU para ver algumas
+
+252
+00:18:29,540 --> 00:18:34,810
+instruções sobre como adaptar este tipo
+de código para acomodar
+
+253
+00:18:34,810 --> 00:18:40,090
+um pixel multicanal e também precisará
+saber que
+
+254
+00:18:40,090 --> 00:18:43,130
+o comprimento precisará ser adaptado para
+o valor de "pitch" se
+
+255
+00:18:43,130 --> 00:18:48,530
+estiver manipulando arquivos de imagem mais
+gerais. Bem, isto
+
+256
+00:18:48,530 --> 00:18:54,670
+conclui a discussão acerca do kernel de
+convolução bidimensional.
+
+257
+00:18:54,670 --> 00:18:57,940
+Neste ponto, vocês estão preparados para
+o exercício-programa
+
+258
+00:18:57,940 --> 00:19:00,500
+para a convolução bidimensional e
+
+259
+00:19:00,500 --> 00:19:02,710
+então para aqueles que gostariam de
+
+260
+00:19:02,710 --> 00:19:07,910
+aprender mais sobre uso de memória constante
+ou convolução em geral,
+
+261
+00:19:07,910 --> 00:19:14,904
+eu gostaria de encorajá-los a ler a seção 8.3
+do livro-texto. Muito obrigado.
+
