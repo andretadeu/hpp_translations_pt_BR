@@ -1,0 +1,5 @@
+Translation notes:
+1) Some stuttering and humming were removed in order to improve student's understanding.
+2) Ghost elements was translated to "elementos fantasmas". This can be put back in english according to the preference of other translators.
+3) Some discourse markers were removed since its translation would sound strange or could cause some loss of student's understanding of the topic on the sentence.
+4) Plenty of Text-To-Speech errors in the subtitles were found and corrected.
